@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalman Filter Presentation</title>
+<style>
+/* Theme Variables */
+:root {
+  --font-family-display: Arial, sans-serif;
+  --font-weight-display: 600;
+  --font-family-content: Arial, sans-serif;
+  --font-weight-content: 400;
+  --font-size-content: 16px;
+  --line-height-content: 1.4;
+}
+
+/* DARK THEME (DEFAULT) */
+body.theme-dark {
+  --color-bg-base: #0f172a;
+  --color-bg-elevated: #020617;
+  --color-bg-surface: #1e293b;
+  --color-bg-muted: #334155;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-accent: #38bdf8;
+  --color-primary: #38bdf8;
+  --color-primary-foreground: #0f172a;
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family-content);
+  font-weight: var(--font-weight-content);
+  font-size: var(--font-size-content);
+  line-height: var(--line-height-content);
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Slide Container */
+.slide {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Layout Utilities */
+.row { flex-direction: row; }
+.col { flex-direction: column; }
+.center {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.space-between { justify-content: space-between; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.fill-width { flex: 1; }
+.fill-height { flex: 1; display: flex; flex-direction: column; }
+
+/* Spacing */
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+.gap-xl { gap: 2rem; }
+.gap-2xl { gap: 3rem; }
+
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.p-8 { padding: 2rem; }
+.p-12 { padding: 3rem; }
+.p-16 { padding: 4rem; }
+
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mb-12 { margin-bottom: 3rem; }
+
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-6 { margin-top: 1.5rem; }
+.mt-8 { margin-top: 2rem; }
+.mt-12 { margin-top: 3rem; }
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display);
+  font-weight: var(--font-weight-display);
+  line-height: 1.2;
+  margin: 0;
+}
+
+h1 { font-size: 6rem; }
+h2 { font-size: 4.5rem; }
+h3 { font-size: 3.5rem; }
+h4 { font-size: 3rem; }
+h5 { font-size: 2.5rem; }
+h6 { font-size: 2rem; }
+
+.text-6xl { font-size: 7rem; }
+.text-5xl { font-size: 6rem; }
+.text-4xl { font-size: 5rem; }
+.text-3xl { font-size: 4rem; }
+.text-2xl { font-size: 3.5rem; }
+.text-xl { font-size: 2.5rem; }
+.text-lg { font-size: 2.25rem; }
+.text-base { font-size: 2rem; }
+.text-sm { font-size: 1.75rem; }
+.text-xs { font-size: 1.5rem; }
+
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+.font-normal { font-weight: 400; }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.opacity-90 { opacity: 0.9; }
+.opacity-80 { opacity: 0.8; }
+.opacity-70 { opacity: 0.7; }
+.opacity-60 { opacity: 0.6; }
+
+/* Lists */
+ul, ol {
+  margin-left: 3rem;
+  line-height: 2.2;
+}
+
+ul li { list-style: disc; }
+ol li { list-style: decimal; }
+
+li { margin-bottom: 1.75rem; }
+li:last-child { margin-bottom: 0; }
+
+/* Card Styles */
+.card-rect {
+  padding: 4rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Slide visibility control */
+.slide {
+  display: none;
+}
+
+.slide.active {
+  display: flex;
+}
+
+/* Slide counter */
+.slide-counter {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #f1f5f9;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  z-index: 1000;
+}
+</style>
+</head>
+<body class="theme-dark">
+
+  <!-- Slide counter -->
+  <div class="slide-counter" id="slideCounter">1 / 18</div>
+
+  <!-- Slide 1: Title -->
+  <section class="slide active p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+    <h1 class="text-6xl mb-4" style="color: #38bdf8;">Kalman Filters</h1>
+    <p class="text-2xl" style="color: #cbd5e1;">From Theory to Implementation</p>
+    <p class="text-sm mt-8" style="color: #94a3b8;">Extended Tightly Coupled Navigation</p>
+  </section>
+
+  <!-- Slide 2: What is a Kalman Filter? -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">What is a Kalman Filter?</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>An optimal estimation algorithm for linear systems with Gaussian noise</li>
+        <li>Uses a two-phase process: prediction and update</li>
+        <li>Combines noisy measurements with system models to estimate true state</li>
+        <li>Recursively refines estimates over time using weighted averages</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 3: Kalman Filter Equations -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Kalman Filter Process</h2>
+    <div class="fill-height row gap-lg">
+      <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+        <h3 class="mb-4" style="color: #38bdf8;">Prediction Phase</h3>
+        <p style="color: #cbd5e1;">Projects state forward using system dynamics and process noise</p>
+      </div>
+      <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+        <h3 class="mb-4" style="color: #38bdf8;">Update Phase</h3>
+        <p style="color: #cbd5e1;">Corrects prediction using measurements and Kalman gain weighting</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 4: Extended Kalman Filter (EKF) -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Extended Kalman Filter (EKF)</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Extends Kalman filtering to nonlinear systems</li>
+        <li>Linearizes system dynamics using first-order Taylor expansion</li>
+        <li>Computes Jacobian matrices for state transition and measurement models</li>
+        <li>Standard approach for navigation, GPS, and sensor fusion</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 5: EKF Linearization -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">EKF Linearization Approach</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">Handles nonlinearity by approximating functions around current estimate</p>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Computes Jacobian matrices at each time step</li>
+        <li>Uses linear Kalman filter equations with linearized models</li>
+        <li>Accuracy depends on linearity of system near estimate</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 6: Tightly Coupled vs Loosely Coupled -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Coupling Strategies</h2>
+    <div class="fill-height row gap-lg">
+      <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+        <h3 class="mb-4" style="color: #38bdf8;">Loosely Coupled</h3>
+        <p style="color: #cbd5e1;">Uses filtered position and velocity from GNSS receiver</p>
+      </div>
+      <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+        <h3 class="mb-4" style="color: #38bdf8;">Tightly Coupled</h3>
+        <p style="color: #cbd5e1;">Fuses raw GNSS measurements (pseudorange, Doppler) directly</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 7: Tightly Coupled Extended Kalman Filter -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Tightly Coupled EKF</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Integrates raw GNSS pseudorange and Doppler measurements</li>
+        <li>Single centralized Kalman filter processes all sensor data</li>
+        <li>Better performance in poor signal quality or limited satellite coverage</li>
+        <li>More robust to individual sensor failures</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 8: Tightly Coupled Advantages -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Why Tight Coupling Matters</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Can navigate with fewer than 4 visible satellites</li>
+        <li>Predicts pseudoranges and Doppler trends using INS</li>
+        <li>Improves accuracy and reliability over loosely coupled systems</li>
+        <li>Essential for challenging dynamic navigation environments</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 9: Implementation Overview -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Implementation Architecture</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>C++ implementation using GSL (GNU Scientific Library)</li>
+        <li>Modular class-based design for EKF operations</li>
+        <li>Hyperdual numbers for automatic differentiation</li>
+        <li>Runge-Kutta integration for nonlinear dynamics</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 10: Core Components -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-8" style="color: #38bdf8;">Core Implementation Components</h2>
+    <div class="row gap-lg">
+      <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+        <h3 class="mb-4" style="color: #38bdf8;">EKF Class</h3>
+        <p style="color: #cbd5e1;">Manages state estimation, prediction, and measurement updates</p>
+      </div>
+      <div class="fill-width" style="background-color: #1e293b; padding: 2rem;">
+        <h3 class="mb-4" style="color: #38bdf8;">Hyperdual Library</h3>
+        <p style="color: #cbd5e1;">Computes exact Jacobians via automatic differentiation</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 11: Time Update Implementation -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Time Update (Prediction)</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Propagates state using nonlinear process model</li>
+        <li>Computes state transition matrix via hyperdual Jacobian</li>
+        <li>Updates covariance with process noise coupling</li>
+        <li>Uses RK45 ODE solver for numerical integration</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 12: Measurement Update Implementation -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Measurement Update (Correction)</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Computes measurement Jacobian using hyperdual differentiation</li>
+        <li>Calculates Kalman gain from covariance and measurement noise</li>
+        <li>Updates state estimate with measurement residuals</li>
+        <li>Refines covariance matrix for next iteration</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 13: GNSS Measurement Model -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Tightly Coupled Measurement Model</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">Directly processes raw satellite observables</p>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Pseudorange: geometric distance + clock bias</li>
+        <li>Doppler shift: range rate + clock drift</li>
+        <li>Dynamic satellite selection with active/inactive tracking</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 14: Automatic Differentiation -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Hyperdual Automatic Differentiation</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Computes exact derivatives without numerical approximation</li>
+        <li>Eliminates truncation errors from finite differences</li>
+        <li>Evaluates Jacobian matrices in single function pass</li>
+        <li>Essential for accurate EKF linearization</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 15: Matrix Operations -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Matrix Operations Library</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Matrix multiplication, transposition, and inversion</li>
+        <li>Dynamic measurement slicing for active satellites</li>
+        <li>Hyperdual-compatible Jacobian computation</li>
+        <li>Integration with GSL for numerical stability</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 16: Simulation Features -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Simulation Capabilities</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Truth trajectory generation with nonlinear dynamics</li>
+        <li>Synthetic measurement generation with noise</li>
+        <li>Automated nonlinear simulation with configurable time steps</li>
+        <li>CSV export of states, residuals, and performance metrics</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 17: Key Implementation Features -->
+  <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Implementation Highlights</h2>
+    <div class="fill-height">
+      <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Modular design with user-defined process and measurement models</li>
+        <li>Flexible control input and feedback mechanisms</li>
+        <li>Dynamic covariance symmetrization for numerical stability</li>
+        <li>External trajectory support for validation testing</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 18: Thank You -->
+  <section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+    <h2 class="text-5xl mb-6" style="color: #38bdf8;">Thank You!</h2>
+    <p class="text-xl" style="color: #cbd5e1;">Questions?</p>
+  </section>
+
+  <!-- Slide 19: Code Implementation - STM Function -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">State Transition Matrix (STM)</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.3rem; line-height: 1.6; color: #cbd5e1;"><code>gsl_matrix* extendedKalmanFilter::stm(double tIn, 
+    gsl_matrix* xIn, double dtIn, gsl_matrix* u) {
+  
+  gsl_matrix* pertEye = gsl_matrix_calloc(
+      initPerturbationState->size1, 
+      initPerturbationState->size1);
+  gsl_matrix_set_identity(pertEye);
+  
+  // Compute Jacobian using hyperdual differentiation
+  gsl_matrix* jacobian = hyperdual_jacobian(
+      processModel, tIn, xIn, u);
+  
+  gsl_matrix_scale(jacobian, dtIn);
+  gsl_matrix_add(pertEye, jacobian);
+  
+  gsl_matrix_free(jacobian);
+  return pertEye;  // Φ = I + F*dt
+}</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Variables</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>tIn:</strong> Current time</li>
+        <li><strong>xIn:</strong> Current state vector</li>
+        <li><strong>dtIn:</strong> Time step</li>
+        <li><strong>u:</strong> Control input</li>
+        <li><strong>pertEye:</strong> Identity matrix</li>
+        <li><strong>jacobian:</strong> System Jacobian (F)</li>
+        <li><strong>Φ:</strong> State transition matrix</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 20: Code Implementation - Time Update -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">Time Update Implementation</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.2rem; line-height: 1.6; color: #cbd5e1;"><code>bool extendedKalmanFilter::runTimeUpdate() {
+  // Compute state transition matrix
+  phi = stm(tK, currentAbsoluteState, dtMeasurement, 
+            controlFunc(tK, currentAbsoluteState));
+  
+  gsl_matrix* phiT = gsl_matrix_calloc(phi->size2, phi->size1);
+  gsl_matrix_transpose_memcpy(phiT, phi);
+  
+  // Process noise coupling
+  Gkm1 = processNoiseCoupling;
+  qK = Gkm1 * processNoise * stepUpdate * dtProcess * Gkm1T;
+  
+  // Predict state: x̂⁻ = Φ * x̂⁺
+  currentPerturbationState = matDot(phi, previousPerturbationState);
+  
+  // Predict covariance: P⁻ = Φ * P⁺ * ΦT + Q
+  currentCovariance = matDot(phi, matDot(previousCovariance, phiT));
+  gsl_matrix_add(currentCovariance, qK);
+  
+  return true;
+}</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Variables</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>phi (Φ):</strong> State transition matrix</li>
+        <li><strong>phiT (ΦT):</strong> Transpose of Φ</li>
+        <li><strong>Gkm1:</strong> Process noise coupling matrix</li>
+        <li><strong>qK (Q):</strong> Process noise covariance</li>
+        <li><strong>x̂⁻:</strong> Predicted state</li>
+        <li><strong>P⁻:</strong> Predicted covariance</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 21: Code Implementation - Measurement Update -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">Measurement Update Implementation</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.15rem; line-height: 1.6; color: #cbd5e1;"><code>bool extendedKalmanFilter::runMeasurementUpdate() {
+  // Compute measurement Jacobian using hyperdual differentiation
+  H = dynamicMeasMatrix(tK, currentAbsoluteState);
+  H = sliceMeasurement(H);  // Only active satellites
+  
+  // Measurement residual: y = z - h(x̂⁻)
+  measResi = deltaMeas - matDot(H, currentPerturbationState);
+  
+  gsl_matrix* HT = transpose(H);
+  
+  // Innovation covariance: S = H * P⁻ * HT + R
+  uninvertedMatrix = matDot(H, matDot(currentCovariance, HT));
+  gsl_matrix_add(uninvertedMatrix, measurementNoise);
+  
+  // Kalman gain: K = P⁻ * HT * S⁻¹
+  kBar = matDot(currentCovariance, 
+                matDot(HT, invertMat(uninvertedMatrix)));
+  
+  return true;
+}</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Variables</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>H:</strong> Measurement Jacobian matrix</li>
+        <li><strong>measResi (y):</strong> Measurement residual/innovation</li>
+        <li><strong>deltaMeas (z):</strong> Actual measurements</li>
+        <li><strong>HT:</strong> Transpose of H</li>
+        <li><strong>S:</strong> Innovation covariance</li>
+        <li><strong>kBar (K):</strong> Kalman gain</li>
+        <li><strong>R:</strong> Measurement noise</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 22: Code Implementation - Covariance Update -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">Covariance Update (Joseph Form)</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.2rem; line-height: 1.6; color: #cbd5e1;"><code>// Joseph form for numerical stability
+gsl_matrix* kBarT = transpose(kBar);
+gsl_matrix* covEye = identity(currentCovariance->size1);
+
+// (I - K*H)
+gsl_matrix* kBar_H = matDot(kBar, H);
+gsl_matrix_sub(covEye, kBar_H);
+
+gsl_matrix* covEyeT = transpose(covEye);
+
+// P⁺ = (I - K*H) * P⁻ * (I - K*H)T + K * R * KT
+filteredCovariance = matDot(covEye, 
+    matDot(currentCovariance, covEyeT));
+gsl_matrix_add(filteredCovariance, 
+    matDot(kBar, matDot(measurementNoise, kBarT)));
+
+// Symmetrize for numerical stability
+gsl_matrix_memcpy(currentCovariance, filteredCovariance);
+symmetrize(currentCovariance);</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Variables</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>kBarT (KT):</strong> Kalman gain transpose</li>
+        <li><strong>covEye:</strong> Identity matrix</li>
+        <li><strong>(I - K*H):</strong> Reduction factor</li>
+        <li><strong>P⁺:</strong> Updated covariance</li>
+        <li><strong>P⁻:</strong> Predicted covariance</li>
+        <li><strong>Joseph Form:</strong> Ensures positive definiteness</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 23: Code Implementation - Tightly Coupled Measurement Model -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">GNSS Measurement Model (Pseudorange)</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.15rem; line-height: 1.6; color: #cbd5e1;"><code>std::vector&lt;hyperdual&gt; measurementModel(...) {
+  // Transform receiver position to ECI frame
+  std::vector&lt;hyperdual&gt; rEci = vecDot(dcmIn, r012);
+  std::vector&lt;hyperdual&gt; rEciDot = vecDot(dcmIn, r345);
+  
+  double CSpeedOfLight = 299792458.0;
+  std::vector&lt;hyperdual&gt; measModel;
+  
+  for (size_t i = 0; i &lt; numSats; i++) {
+    // Geometric range to satellite
+    hyperdual a = satPosX - rEci[0];
+    hyperdual b = satPosY - rEci[1];
+    hyperdual c = satPosZ - rEci[2];
+    hyperdual geoMag = pow((a*a + b*b + c*c), 0.5);
+    
+    // Pseudorange = geometric range + clock bias
+    hyperdual pseudorange = geoMag + 
+        CSpeedOfLight * ekfVarsIn[size - 2];
+    measModel.push_back(pseudorange);
+  }
+}</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Variables</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>rEci:</strong> Receiver position in ECI frame</li>
+        <li><strong>dcmIn:</strong> Direction cosine matrix</li>
+        <li><strong>geoMag:</strong> Geometric range to satellite</li>
+        <li><strong>pseudorange:</strong> Raw GNSS measurement</li>
+        <li><strong>ekfVarsIn:</strong> EKF state vector</li>
+        <li><strong>clock bias:</strong> Receiver time error</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 24: Code Implementation - Hyperdual Jacobian -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">Automatic Differentiation via Hyperdual</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.2rem; line-height: 1.6; color: #cbd5e1;"><code>gsl_matrix* dynamicMeasMatrix(double tLoc2, gsl_matrix* xIn) {
+  size_t stateDim = xIn->size1;
+  
+  gsl_matrix* jacobian = gsl_matrix_calloc(measDim, stateDim);
+  
+  // Compute each column of Jacobian
+  for (size_t j = 0; j &lt; stateDim; j++) {
+    std::vector&lt;hyperdual&gt; x_hdual(stateDim);
+    
+    // Initialize state with hyperdual numbers
+    for (size_t k = 0; k &lt; stateDim; k++) {
+      x_hdual[k] = hyperdual(gsl_matrix_get(xIn, k, 0));
+    }
+    
+    // Perturb j-th component with dual part
+    x_hdual[j] = hyperdual(gsl_matrix_get(xIn, j, 0), 
+                           1.0, 0.0, 0.0);
+    
+    // Evaluate function with hyperdual inputs
+    std::vector&lt;hyperdual&gt; f_dual = measurementModel(...);
+    
+    // Extract derivative from dual part
+    gradients[j] = f_dual[i].eps1();
+  }
+}</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Variables</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>jacobian:</strong> Partial derivatives matrix (∂f/∂x)</li>
+        <li><strong>x_hdual:</strong> State vector with dual numbers</li>
+        <li><strong>eps1():</strong> First dual component (derivative)</li>
+        <li><strong>stateDim:</strong> Number of state variables</li>
+        <li><strong>f_dual:</strong> Function output with derivatives</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 25: Code Implementation - Feedback Application -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">State Feedback and Reset</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.3rem; line-height: 1.6; color: #cbd5e1;"><code>bool extendedKalmanFilter::applyFeedback() {
+  gsl_matrix_memcpy(currentPerturbationState, 
+                    filteredPerturbationState);
+  
+  // Apply feedback: x_abs = x_abs + δx
+  std::vector&lt;gsl_matrix*&gt; feedback = 
+      feedBackFunc(tK, currentPerturbationState, 
+                   currentAbsoluteState);
+  
+  filteredAbsoluteState = feedback[1];
+  filteredPerturbationState = feedback[0];
+  
+  // Update current states
+  gsl_matrix_memcpy(currentAbsoluteState, 
+                    filteredAbsoluteState);
+  gsl_matrix_memcpy(currentPerturbationState, 
+                    filteredPerturbationState);
+  
+  return true;
+}</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Variables</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>δx:</strong> Perturbation state (error)</li>
+        <li><strong>x_abs:</strong> Absolute state vector</li>
+        <li><strong>feedback:</strong> State correction values</li>
+        <li><strong>filteredState:</strong> Updated state after correction</li>
+        <li><strong>Reset:</strong> Returns perturbation to zero</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Slide 26: Code Implementation - Main Filter Loop -->
+  <section class="slide p-16 row" style="background-color: #0f172a; color: #f1f5f9;">
+    <div style="flex: 2; padding-right: 2rem;">
+      <h2 class="mb-6" style="color: #38bdf8;">Main Kalman Filter Execution</h2>
+      <pre style="background-color: #1e293b; padding: 2rem; overflow-x: auto; font-size: 1.25rem; line-height: 1.6; color: #cbd5e1;"><code>bool runKalmanFilteringComputations() {
+  // Three-phase Kalman filter cycle
+  
+  // 1. Prediction: propagate state and covariance
+  runTimeUpdate();
+  
+  // 2. Correction: update with measurements
+  runMeasurementUpdate();
+  
+  // 3. Reset: apply feedback to absolute state
+  applyFeedback();
+  
+  return true;
+}
+
+// Called when measurement trigger condition met
+if (measureUpdateTrigger(time, currentState)) {
+  runKalmanFilteringComputations();
+  logVarsDuringMeasurement();
+  freeFilterVariables();
+}</code></pre>
+    </div>
+    <div style="flex: 1; background-color: #1e293b; padding: 2rem;">
+      <h3 class="mb-4" style="color: #38bdf8; font-size: 2rem;">Phases</h3>
+      <ul style="font-size: 1.4rem; line-height: 1.8; color: #cbd5e1;">
+        <li><strong>1. Prediction:</strong> Project state forward in time</li>
+        <li><strong>2. Correction:</strong> Update using measurements</li>
+        <li><strong>3. Reset:</strong> Apply feedback to state</li>
+        <li><strong>Trigger:</strong> Measurement availability condition</li>
+        <li><strong>Cycle:</strong> Repeats for each measurement</li>
+      </ul>
+    </div>
+  </section>
+
+  <script>
+    // Slide navigation logic
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const slideCounter = document.getElementById('slideCounter');
+    const totalSlides = slides.length;
+
+    function showSlide(index) {
+      // Ensure index is within bounds
+      if (index < 0) {
+        currentSlide = 0;
+      } else if (index >= totalSlides) {
+        currentSlide = totalSlides - 1;
+      } else {
+        currentSlide = index;
+      }
+
+      // Hide all slides
+      slides.forEach(slide => slide.classList.remove('active'));
+
+      // Show current slide
+      slides[currentSlide].classList.add('active');
+
+      // Update counter
+      slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        showSlide(currentSlide + 1);
+      }
+    }
+
+    function previousSlide() {
+      if (currentSlide > 0) {
+        showSlide(currentSlide - 1);
+      }
+    }
+
+    // Keyboard event listener
+    document.addEventListener('keydown', (event) => {
+      switch(event.key) {
+        case ' ':  // Spacebar
+        case 'ArrowRight':
+        case 'ArrowDown':
+          event.preventDefault();
+          nextSlide();
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          event.preventDefault();
+          previousSlide();
+          break;
+        case 'Home':
+          event.preventDefault();
+          showSlide(0);
+          break;
+        case 'End':
+          event.preventDefault();
+          showSlide(totalSlides - 1);
+          break;
+      }
+    });
+
+    // Initialize first slide
+    showSlide(0);
+  </script>
+
+</body>
+</html>
